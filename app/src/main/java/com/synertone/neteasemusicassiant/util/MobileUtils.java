@@ -1,14 +1,22 @@
 package com.synertone.neteasemusicassiant.util;
 
+import android.annotation.TargetApi;
+import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
+
+import com.synertone.neteasemusicassiant.ScreenOffAdminReceiver;
+import com.synertone.neteasemusicassiant.SwitchSongService;
+
 //感谢分享：https://blog.csdn.net/lsw8569013/article/details/78621505?locationNum=6&fps=1
-public class MobileInfoUtils {
+public class MobileUtils {
     /**
      * Get Mobile Type
      *
@@ -68,7 +76,54 @@ public class MobileInfoUtils {
             context.startActivity(intent);
         }
     }
+    /**
+     * 检测辅助功能是否开启<br>
+     * 方 法 名：isAccessibilitySettingsOn <br>
+     * 创 建 人 <br>
+     * 创建时间：2016-6-22 下午2:29:24 <br>
+     * 修 改 人： <br>
+     * 修改日期： <br>
+     * @param mContext
+     * @return boolean
+     */
+    public static boolean isAccessibilitySettingsOn(Context mContext) {
+        int accessibilityEnabled = 0;
+        // TestService为对应的服务
+        final String service = mContext.getPackageName() + "/" + SwitchSongService.class.getCanonicalName();
+        try {
+            accessibilityEnabled = Settings.Secure.getInt(mContext.getApplicationContext().getContentResolver(),
+                    android.provider.Settings.Secure.ACCESSIBILITY_ENABLED);
+        } catch (Settings.SettingNotFoundException e) {
+            e.printStackTrace();
+        }
+        TextUtils.SimpleStringSplitter mStringColonSplitter = new TextUtils.SimpleStringSplitter(':');
 
+        if (accessibilityEnabled == 1) {
+            String settingValue = Settings.Secure.getString(mContext.getApplicationContext().getContentResolver(),
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (settingValue != null) {
+                mStringColonSplitter.setString(settingValue);
+                while (mStringColonSplitter.hasNext()) {
+                    String accessibilityService = mStringColonSplitter.next();
+                    if (accessibilityService.equalsIgnoreCase(service)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    @TargetApi(Build.VERSION_CODES.M)
+    public static boolean isIgnoringBatteryOptimizations(Context mContext) {
+        PowerManager pm = (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
+        return pm.isIgnoringBatteryOptimizations(mContext.getPackageName());
+    }
+
+    public static boolean isAdmin(Context mContext) {
+        DevicePolicyManager policyManager = (DevicePolicyManager) mContext.getSystemService(Context.DEVICE_POLICY_SERVICE);
+        ComponentName adminReceiver = new ComponentName(mContext, ScreenOffAdminReceiver.class);
+        return  policyManager.isAdminActive(adminReceiver);
+    }
 }
 
 
